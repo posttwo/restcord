@@ -12,7 +12,7 @@
     },
     "autoload":    {
         "psr-4": {
-            "Posttwo\\Restcord\\": "src/"
+            "Restcord\\": "src/"
         }
     },
     "license":     "MIT",
