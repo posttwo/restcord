@@ -1,5 +1,5 @@
 {
-    "name":        "restcord/restcord",
+    "name":        "posttwo/restcord",
     "description": "REST Library for the Discord API",
     "type":        "library",
     "require":     {
