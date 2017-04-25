@@ -250,7 +250,7 @@ class DiscordClient
     private function updateParameterTypes(array &$parameterConfig)
     {
         if ($parameterConfig['type'] === 'snowflake') {
-            $parameterConfig['type'] = 'integer';
+            $parameterConfig['type'] = 'string';
         }
 
         if ($parameterConfig['type'] === 'bool') {
