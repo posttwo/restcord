@@ -69,23 +69,6 @@ class RateLimiter
     public function __invoke(callable $handler)
     {
         return function (RequestInterface $request, $options) use ($handler) {
-            // Amount of time to delay the request by
-            $delay = $this->getDelay($request);
-
-            if ($delay > 0) {
-                if ($this->options['throwOnRatelimit']) {
-                    throw new RatelimitException($request->getMethod().' '.$request->getUri());
-                }
-
-                $this->log($request, $delay);
-                $this->delay($delay);
-            }
-
-            // Sets the time when this request is beind made,
-            // which allows calculation of allowance later on.
-            $this->provider->setLastRequestTime($request);
-
-            // Set the allowance when the response was received
             return $handler($request, $options)->then($this->setAllowance($request));
         };
     }
@@ -134,7 +117,7 @@ class RateLimiter
      */
     protected function getDefaultLogLevel()
     {
-        return LogLevel::DEBUG;
+        return LogLevel::ERROR;
     }
 
     /**
@@ -178,12 +161,9 @@ class RateLimiter
      */
     protected function getDelay(RequestInterface $request)
     {
-        $lastRequestTime  = $this->provider->getLastRequestTime($request);
-        $requestAllowance = $this->provider->getRequestAllowance($request);
-        $requestTime      = $this->provider->getRequestTime($request);
-
-        // If lastRequestTime is null or false, the max will be 0.
-        return max(0, $requestAllowance - ($requestTime - $lastRequestTime));
+        $delay  = $this->provider->retryAfter($request);
+        echo $delay;
+        return $delay;
     }
 
     /**
@@ -209,8 +189,12 @@ class RateLimiter
     protected function setAllowance(RequestInterface $request)
     {
         return function (ResponseInterface $response) use ($request) {
-            $this->provider->setRequestAllowance($request, $response);
-
+            $timeRetry = $this->provider->retryAfter($response);
+            if($timeRetry !== 0){
+                echo "Rate Limited";
+                usleep($timeRetry*1000);
+                throw new Exception;
+            }
             return $response;
         };
     }

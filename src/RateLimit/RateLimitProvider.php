@@ -15,6 +15,8 @@ namespace RestCord\RateLimit;
 
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Illuminate\Support\Facades\Cache;
+use Debugbar;
 
 /**
  * @author Aaron Scherer <aequasi@gmail.com>
@@ -34,28 +36,18 @@ class RateLimitProvider
      */
     public function getLastRequestTime(RequestInterface $request)
     {
-        $route = $request->getMethod().'-'.$request->getUri();
-
-        if (isset($this->routes[$route])) {
-            return isset($this->routes[$route]['lastRequest']) ? $this->routes[$route]['lastRequest'] : null;
-        }
+        return Cache::get('ratelmit_' . 'last_request_time');
     }
 
     /**
      * Used to set the current time as the last request time to be queried when
      * the next request is attempted.
      *
-     * @param RequestInterface $request
+     * @param RequestInterface $requestCache::forever('last_request_time', microtime(true));
      */
     public function setLastRequestTime(RequestInterface $request)
     {
-        $route = $request->getMethod().'-'.$request->getUri();
-
-        if (!isset($this->routes[$route])) {
-            $this->routes[$route] = [];
-        }
-
-        $this->routes[$route]['lastRequest'] = microtime(true);
+        Cache::forever('ratelmit_' . 'last_request_time', microtime(true));
     }
 
     /**
@@ -85,16 +77,7 @@ class RateLimitProvider
      */
     public function getRequestAllowance(RequestInterface $request)
     {
-        $route = $request->getMethod().'-'.$request->getUri();
-        if (!isset($this->routes[$route])) {
-            return 0;
-        }
-
-        if (!isset($this->routes[$route]['reset'])) {
-            return 0;
-        }
-
-        return ($this->routes[$route]['reset'] - time()) * 1000000;
+        return  Cache::get('ratelmit_' . 'request_allowance', 0);
     }
 
     /**
@@ -108,12 +91,21 @@ class RateLimitProvider
     {
         $route = $request->getMethod().'-'.$request->getUri();
 
-        $remaining = $response->getHeader('X-RateLimit-Remaining');
-        $reset     = $response->getHeader('X-RateLimit-Reset');
-        if (empty($remaining) || empty($reset) || (int) $remaining[0] > 0) {
-            return;
-        }
+        $requests = $response->getHeader('X-RateLimit-Remaining')[0];
+        $seconds     = $response->getHeader('X-RateLimit-Reset')[0];
+        $allowance = (float) $seconds / $requests;
+        Cache::forever('ratelmit_' . 'request_allowance', $allowance);
+    }
 
-        $this->routes[$route]['reset'] = $reset[0];
+    public function retryAfter(ResponseInterface $response)
+    {
+        $requests = null;
+        if(isset($response->getHeader('Retry-After')[0])){
+            $requests = $response->getHeader('Retry-After')[0];
+            echo "RetryAfter" . $requests;
+        }
+        if($requests !== null)
+            return $requests;
+        return 0;
     }
 }
