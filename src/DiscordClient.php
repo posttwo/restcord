@@ -117,7 +117,7 @@ class DiscordClient
                 'version'          => $currentVersion,
                 'logger'           => new Logger('Logger'),
                 'throwOnRatelimit' => false,
-                'apiUrl'           => 'https://discordapp.com/api/v'.$currentVersion,
+                'apiUrl'           => 'https://discord.com/api/v'.$currentVersion,
                 'tokenType'        => 'None',
                 'guzzleOptions'    => [],
             ]
